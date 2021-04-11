@@ -77,3 +77,75 @@ class Square extends React.Component {
 When `this.setState` is called from an `onClick` handler in the Square's `render` method, React will re-render that Square whenever its `<button>` is clicked. After the update, the Square's `this.state.vaue` will be `'X'` so the square will be filled with `X`.
 
 **Note: When you call `setState` in a component, the child components inside are udated automatically.**
+
+## Lifting State Up
+Currently, each Square component maintains the game's state. To check for a rinner, we need to maintain the state of all 9 squares in one location. Instead of the parent Board asking each child Square for its state, its recommended to store the game's state in the parent Board. This makes the code easier to understand, less susceptible to bugs and easier to refactor.
+
+We add a constructor to the `Board` and initialise its state to contain an array of 9 `null` corresponding to the 9 squares. The `renderSquare` method uses the prop passing mechanism to let each child Square know its current value (`X`, `O`, or `null`). 
+```javascript
+renderSquare(i) {
+    return <Square value={this.state.squares[i]} />;
+}
+```
+
+Now we have to change what happends when a Square is clicked - the Board maintains which squares are filled but we need to create a way for the Square to update the Board's state. Since state is considered private to the component that defines it, we cannot update the Board's state directly from Square. The solution to this is to pass down a function from Board to Square to be called when a square is clicked. We change the `renderSquare` method in Board to pass the function:
+
+```javascript
+renderSquare(i) {
+  return (
+    <Square
+      value={this.state.squares[i]}
+      onClick={() => this.handleClick(i)}
+    />
+  );
+}
+```
+
+Now, 2 props are being passed from Board to Square: `value` and `onClick`. `onClick` is a function that Square can call when clicked to update the Board's state. We update Square's `render` method to call the function passed down from Board when clicked.
+
+```javascript
+class Square extends React.Component {
+  render() {
+    return (
+      <button
+        className="square"
+        onClick={() => this.props.onClick()}
+      >
+        {this.props.value}
+      </button>
+    );
+  }
+}
+```
+
+Since the Board passed `onClick={() => this.handleClick(i)}` to Square, Square essentially calls `this.handleClick(i)` when clicked.
+
+We now add the `handleClick` method to `Board` to update the Board's state when a Square is clicked.
+
+```javascript
+handleClick(i) {
+  const squares = this.state.squares.slice();
+  squares[i] = 'X';
+  this.setState({squares: squares});
+}
+```
+
+**Note: in `handleClick` we call `.slice()` to create a copy of the `squares` array to modify instead of modifying the existing array.**
+
+## Importance of Immutability
+A main benefit of immutability is that it helps build _pure components_. Immutable data can easily determine if changes have been made, which helps to determine when a copmonent requires re-rendering.
+
+## Function Components
+**Function components** are a simpler way to write components that only contain a `render` method and don't have their own state. Instead of defining a class that extends `React.Component`, we can write a function that takes `props` as input and returns what should be rendered. We can replace the Square class with a function:
+
+```javascript
+function Square(props) {
+  return (
+    <button className="square" onClick={props.onClick}>
+      {props.value}
+    </button>
+  );
+}
+```
+
+Notice that we changed `this.props` to `props` since this is no longer a class.
